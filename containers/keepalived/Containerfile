@@ -1,0 +1,49 @@
+FROM registry.access.redhat.com/ubi8/ubi:latest
+
+ENV OCPVERSION="4.8.2"
+ENV OCPRHCOSVERSION="4.8.2"
+ENV HELPERNODEVERSION="v2beta1"
+
+COPY scripts/startup.sh /usr/local/bin/
+COPY files/helperchk.sh /usr/local/bin/
+COPY files/helpernotify.sh /usr/local/bin/
+COPY files/firewall-cmd /usr/local/bin/
+COPY files/keepalived.conf.j2 /usr/local/src/
+
+RUN dnf -y update && \
+    yum -y reinstall shadow-utils && \
+    yum -y install podman fuse-overlayfs --exclude container-selinux
+
+RUN dnf -y install keepalived iproute vim wget jq python3-pip && \
+    python3 -m pip install -U pip && \
+    pip3 install "ansible==2.9" && \
+    wget https://github.com/RedHatOfficial/ocp4-helpernode/releases/download/${HELPERNODEVERSION}/helpernodectl -O /usr/local/bin/helpernodectl && \
+    wget https://github.com/mikefarah/yq/releases/download/v4.10.0/yq_linux_amd64 -O /usr/local/bin/yq && \
+    chmod +x /usr/local/bin/helpernodectl && \
+    chmod +x /usr/local/bin/yq && \
+    chmod +x /usr/local/bin/helperchk.sh && \
+    chmod +x /usr/local/bin/helpernotify.sh && \
+    chmod +x /usr/local/bin/firewall-cmd && \
+    mkdir -p /opt/helpernode/etc && \
+    dnf -y clean all && \
+    rm -rf /var/cache /var/log/dnf* /var/log/yum.*
+
+RUN useradd podman; \
+echo podman:10000:5000 > /etc/subuid; \
+echo podman:10000:5000 > /etc/subgid;
+
+VOLUME /var/lib/containers
+VOLUME /home/podman/.local/share/containers
+
+ADD files/containers.conf /etc/containers/containers.conf
+ADD files/podman-containers.conf /home/podman/.config/containers/containers.conf
+
+RUN chown podman:podman -R /home/podman
+
+RUN chmod 644 /etc/containers/containers.conf; sed -i -e 's|^#mount_program|mount_program|g' -e '/additionalimage.*/a "/var/lib/shared",' -e 's|^mountopt[[:space:]]*=.*$|mountopt = "nodev,fsync=0"|g' /etc/containers/storage.conf
+
+RUN mkdir -p /var/lib/shared/overlay-images /var/lib/shared/overlay-layers /var/lib/shared/vfs-images /var/lib/shared/vfs-layers; touch /var/lib/shared/overlay-images/images.lock; touch /var/lib/shared/overlay-layers/layers.lock; touch /var/lib/shared/vfs-images/images.lock; touch /var/lib/shared/vfs-layers/layers.lock
+
+ENV _CONTAINERS_USERNS_CONFIGURED=""
+
+ENTRYPOINT ["/usr/local/bin/startup.sh"]

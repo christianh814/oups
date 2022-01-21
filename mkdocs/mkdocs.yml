@@ -1,0 +1,42 @@
+site_name: Helpernode v2
+
+theme: 
+    name: material
+    include_homepage_in_sidebar: true
+    include_search_page: false
+    palette:
+      primary: white
+    logo: assets/images/hn2-logo.png
+    favicon: assets/images/hn2-logo-small.png
+    features:
+      - navigation.sections
+
+nav:
+- Home: 'index.md'
+- Using The helpernodectl CLI:
+    - 'Obtaining The Binary': 'binary.md'
+    - 'Shell Completion': 'shell-completion.md'
+    - 'Copy Ignition Configs': 'copy-ign.md'
+    - 'Get Clients': 'get-clients.md'
+    - 'Preflight Checks': 'preflight.md'
+    - 'Pulling Images': 'pull.md'
+    - 'Saving YAML Config': 'saving-yaml.md'
+    - 'Starting the HelperNode Services': 'start.md'
+    - 'Restarting the HelperNode Services': 'restart.md'
+    - 'Displaying Status': 'status.md'
+    - 'Stopping the HelperNode Services': 'stop.md'
+- Documentation for helpernode.yaml:
+    - 'The helpernode.yaml File': 'yaml-file-forward.md'
+    - 'Helper Section': 'helper-section.md'
+    - 'DNS Server Section': 'dns-section.md'
+    - 'DHCP Server Section': 'dhcp-section.md'
+    - 'Bootstrap Node Section': 'bootstrap-section.md'
+    - 'Master Nodes Section': 'master-section.md'
+    - 'Worker Nodes Section': 'worker-section.md'
+    - 'Disabled Services Section': 'disabled-section.md'
+    - 'IPI Installation Section': 'ipi-specific.md'
+    - 'Pluggable Services': 'pluggable-services.md'
+    - 'Sample YAML Configurations': 'sample-yamls.md'
+- Quickstarts:
+    - 'Full Stack Quickstart': 'fullstack-quickstart.md'
+    - 'Disconnected Installation': 'disconnected.md'

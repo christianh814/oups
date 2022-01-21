@@ -1,0 +1,19 @@
+vrrp_script chk_helper {
+  script /usr/local/bin/helperchk.sh
+  interval 2
+  weight 2
+}
+
+vrrp_instance VI_1 {
+  interface {{ helper.networkifacename }}
+  state MASTER # MASTER on helper1, BACKUP on helper2
+  virtual_router_id 51
+  priority 101 # 101 on helper1, 100 on helper2
+  virtual_ipaddress {
+    {{ helper.ipaddr }}/24
+  }
+  track_script {
+    chk_helper
+  }
+  notify /usr/local/bin/helpernotify.sh
+}
