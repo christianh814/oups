@@ -17,20 +17,17 @@ package cmd
 
 import (
 	"fmt"
-
 	"github.com/spf13/cobra"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
 )
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long:  pluginCmdLongText,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("list called")
 	},
@@ -38,14 +35,102 @@ to quickly create a Cobra application.`,
 
 func init() {
 	pluginCmd.AddCommand(listCmd)
+}
 
-	// Here you will define your flags and configuration settings.
+func run() {
+	pluginsFound := false
+	isFirstFile := true
+	pluginErrors := []error{}
+	pluginWarnings := 0
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
+	for _, dir := range uniquePathsList(o.PluginPaths) {
+		if len(strings.TrimSpace(dir)) == 0 {
+			continue
+		}
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+		files, err := ioutil.ReadDir(dir)
+		if err != nil {
+			if _, ok := err.(*os.PathError); ok {
+				fmt.Fprintf(o.ErrOut, "Unable to read directory %q from your PATH: %v. Skipping...\n", dir, err)
+				continue
+			}
+
+			pluginErrors = append(pluginErrors, fmt.Errorf("error: unable to read directory %q in your PATH: %v", dir, err))
+			continue
+		}
+
+		for _, f := range files {
+			if f.IsDir() {
+				continue
+			}
+			if !hasValidPrefix(f.Name(), ValidPluginFilenamePrefixes) {
+				continue
+			}
+
+			if isFirstFile {
+				fmt.Fprintf(o.Out, "The following compatible plugins are available:\n\n")
+				pluginsFound = true
+				isFirstFile = false
+			}
+
+			pluginPath := f.Name()
+			if !o.NameOnly {
+				pluginPath = filepath.Join(dir, pluginPath)
+			}
+
+			fmt.Fprintf(o.Out, "%s\n", pluginPath)
+			if errs := o.Verifier.Verify(filepath.Join(dir, f.Name())); len(errs) != 0 {
+				for _, err := range errs {
+					fmt.Fprintf(o.ErrOut, "  - %s\n", err)
+					pluginWarnings++
+				}
+			}
+		}
+	}
+
+	if !pluginsFound {
+		pluginErrors = append(pluginErrors, fmt.Errorf("error: unable to find any kubectl plugins in your PATH"))
+	}
+
+	if pluginWarnings > 0 {
+		if pluginWarnings == 1 {
+			pluginErrors = append(pluginErrors, fmt.Errorf("error: one plugin warning was found"))
+		} else {
+			pluginErrors = append(pluginErrors, fmt.Errorf("error: %v plugin warnings were found", pluginWarnings))
+		}
+	}
+	if len(pluginErrors) > 0 {
+		errs := bytes.NewBuffer(nil)
+		for _, e := range pluginErrors {
+			fmt.Fprintln(errs, e)
+		}
+		return fmt.Errorf("%s", errs.String())
+	}
+
+	return nil
+}
+
+// uniquePathsList deduplicates a given slice of strings without
+// sorting or otherwise altering its order in any way.
+func uniquePathsList(paths []string) []string {
+	seen := map[string]bool{}
+	newPaths := []string{}
+	for _, p := range paths {
+		if seen[p] {
+			continue
+		}
+		seen[p] = true
+		newPaths = append(newPaths, p)
+	}
+	return newPaths
+}
+
+func hasValidPrefix(filepath string, validPrefixes []string) bool {
+	for _, prefix := range validPrefixes {
+		if !strings.HasPrefix(filepath, prefix+"-") {
+			continue
+		}
+		return true
+	}
+	return false
 }

@@ -25,6 +25,6 @@ func init() {
 	// pluginCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
+	// is called directly, e.g.:k
 	// pluginCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
