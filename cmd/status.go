@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+	cmd2 "github.com/robertsandoval/oups/svcs"
 
 	"github.com/spf13/cobra"
 )
@@ -28,6 +29,7 @@ var statusCmd = &cobra.Command{
 	Long:  statusCmdLongText,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("status called")
+		cmd2.Run()
 	},
 }
 
